@@ -12,4 +12,7 @@ clean:
 
 re: clean all
 
-.PHONY: all clean re
+test: $(BIN1)
+	./$< 00000000 000000000000000100000000000000010000000000000001 17
+
+.PHONY: all clean re test
