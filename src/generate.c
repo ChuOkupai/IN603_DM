@@ -1,8 +1,16 @@
+#include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef struct s_generator
+{
+	uint8_t		F; // Le masque de permutations
+	uint16_t	L[3]; // Les 3 LFSR
+}	t_generator;
 
 // L0 = 0b0000000010010011 => position: 0, 1, 4, 7
 // L1 = 0b0000100010000011 => position: 0, 1, 7, 11
@@ -41,101 +49,122 @@ void print_F(uint8_t F)
 	putchar('\n');
 }
 
-// Fonction utilitaire pour quitter en affichant une erreur
-static int print_error(const char *bin, const char *message)
+// Fonction utilitaire qui convertit un character en valeur hexadécimale
+// Renvoie 16 si le charactère est invalide
+static int xtoi(int c)
 {
-	fprintf(stderr, "error: %s\n", message);
-	fprintf(stderr, "Try '%s --help' for more information.\n", bin);
-	return -1;
+	if (isdigit(c))
+		return (c - '0');
+	return ((c -= 'a') >= 0 && c < 16 ? c : 16);
 }
 
-// Fonction utilitaire pour quitter en affichant l'aide
-static int print_usage(const char *bin)
+/*
+** Fonction utilitaire pour récupérer l'entier à partir d'une chaîne de charactères.
+** Détecte la base 2 (préfixe 0b), la base 16 (préfixe 0x) et la base 10.
+** Si l'argument contient autre chose que des caractères valides,
+** errno prend la valeur EINVAL.
+** Si le nombre est plus grand que max, errno vaut ERANGE.
+*/
+static unsigned long parse(const char *s, unsigned long max)
 {
-	printf("usage: %s [F] [K] [n]\n", bin);
-	puts("F: 8 bit filter function");
-	puts("K: 48 bit key");
-	puts("n: maximum bits in octal, decimal or hexadecimal format");
-	return 0;
-}
+	unsigned long	base;
+	unsigned long	c;
+	unsigned long	n;
 
-// Fonction utilitaire qui vérifie si le caractère c est est chiffre en base 2
-static int isdigit2(int c)
-{
-	return (c == '0' || c == '1');
+	if (!strncmp(s, "0b", 2))
+		s += (base = 2);
+	else if (!strncmp(s, "0x", 2))
+	{
+		base = 16;
+		s += 2;
+	}
+	else
+		base = 10;
+	n = 0;
+	do
+		if ((c = xtoi(*s)) >= base)
+			return (errno = EINVAL);
+		else if (n > (max - c) / base)
+			return (errno = ERANGE);
+		else
+			n = n * base + c;
+	while (*(++s));
+	return (n);
 }
 
 // Echange le bit à la position i avec celui à la position j
 static uint8_t swapb(uint8_t n, uint8_t i, uint8_t j)
 {
-	uint8_t t;
-
-	t = ((n >> i) ^ (n >> j)) & 1;
+	uint8_t t = ((n >> i) ^ (n >> j)) & 1;
 	return (n ^ ((t << i) | (t << j)));
 }
 
-// Initialise F
-static uint8_t init_F(char *s)
+static int generator_init(int ac, char **av, t_generator *g, uint64_t *n)
 {
-	uint8_t	F;
-	int		i;
-
-	F = 0;
-	for (i = 0; s[i] && i < 8 && isdigit2(s[i]); ++i)
-		F = (F << 1) | (uint8_t)(s[i] - '0');
-	if (i != 8 || s[i])
+	if (ac != 4)
 		return (errno = EINVAL);
 	// F utilise les permutations : 1 <-> 4 et 3 <-> 6
 	// Les index sont dans l'ordre inverse donc:
 	// => 7 - 1 <-> 7 - 4
 	// => 7 - 3 <-> 7 - 6
-	return (swapb(swapb(F, 6, 3), 4, 1));
+	g->F = swapb(swapb(parse(av[1], UCHAR_MAX), 6, 3), 4, 1);
+	*n = parse(av[2], 281474976710656UL);
+	g->L[0] = (*n >> 32) & 0xffff;
+	g->L[1] = (*n >> 16) & 0xffff;
+	g->L[2] = *n & 0xffff;
+	*n = parse(av[3], ULONG_MAX);
+	return errno;
 }
 
-// Initialise les 3 registres L0, L1 et L2 avec la clé K
-static void init_L(uint16_t *L, char *s)
+// Retourne la valeur de sortie du générateur
+static uint8_t generator_output(t_generator *g)
 {
-	int j;
+	uint8_t x = (g->L[0] << 2 | g->L[1] << 1 | g->L[2]) & 0b111; // x = x0x1x2
+	return (!!(g->F & (0x80 >> x))); // F(x)
+}
 
-	j = 16;
-	for (int i = 0; i < 3 && j == 16; ++i, s += j)
-		for (j = 0; s[j] && j < 16 && isdigit2(s[j]); ++j)
-			L[i] = (L[i] << 1) | (uint8_t)(s[j] - '0');
-	if (j != 16 || *s)
-		errno = EINVAL;
+// Génère n bits à partir du générateur
+static void generator_run(t_generator *g, uint64_t n)
+{
+	if (!n)
+		return ;
+	while (n--)
+	{
+		//print_L(L);
+		//printf("x: %u %c%c%c\n", c, (c >> 2) + '0', ((c >> 1) & 1) + '0', (c & 1) + '0');
+		putchar('0' + generator_output(g));
+		FEEDBACK(g->L[0], 1, 4, 7);
+		FEEDBACK(g->L[1], 1, 7, 11);
+		FEEDBACK(g->L[2], 2, 3, 5);
+	}
+	putchar('\n');
 }
 
 int main(int ac, char **av)
 {
-	for (int i = 1; i < ac; ++i)
-		if (!strcmp(av[i], "--help"))
-			return print_usage(av[0]);
-	if (ac != 4)
-		return print_error(av[0], strerror(EINVAL));
-	uint16_t	L[3];
-	uint8_t		F;
+	t_generator	g;
 	uint64_t	n;
-	uint8_t		c;
 
-	F = init_F(av[1]);
-	init_L(L, av[2]);
-	if (!(n = strtoul(av[3], NULL, 0)))
-		errno = EINVAL;
-	if (errno) // Gestion d'erreurs éventuelles
-		return print_error(av[0], strerror(errno));
-	//print_L(L);
-	//print_F(F);
-	//printf("n: %lu\n", n);
-	while (n--)
+	for (int i = 1; i < ac; ++i)
+		if (!strcmp(av[i], "--help")) // Affichage de l'aide
+		{
+			printf("usage: %s [FILTER] [KEY] [LEN]\n", av[0]);
+			puts("Each argument can be in base 2 if preceded by '0b',"
+			" in base 16 if preceded by '0x' or in base 10.\n");
+			puts("FILTER: 8 bits used by the filter function");
+			puts("KEY: 48 bits key to initialized LFSRs");
+			puts("LEN: maximum bits to output");
+			return (0);
+		}
+	if (generator_init(ac, av, &g, &n)) // Gestion d'erreurs éventuelles
 	{
-		//print_L(L);
-		c = ((L[0] & 0b100) | (L[1] & 0b10) | (L[2] & 1));
-		//printf("x: %u %c%c%c\n", c, (c >> 2) + '0', ((c >> 1) & 1) + '0', (c & 1) + '0');
-		putchar('0' + !!(F & (0x80 >> c)));
-		FEEDBACK(L[0], 1, 4, 7);
-		FEEDBACK(L[1], 1, 7, 11);
-		FEEDBACK(L[2], 2, 3, 5);
+		fprintf(stderr, "error: %s\nTry '%s --help' for more information.\n",
+		strerror(errno), av[0]);
+		return (EXIT_FAILURE);
 	}
-	putchar('\n');
+	print_L(g.L);
+	print_F(g.F);
+	printf("n: %lu\n", n);
+	generator_run(&g, n);
 	return (0);
 }
