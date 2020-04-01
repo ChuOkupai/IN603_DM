@@ -24,7 +24,7 @@ void print_L(uint16_t *L)
 
 	for (int i = 0; i < 3; ++i)
 	{
-		printf("L%d: ", i);
+		printf("L%d ", i);
 		n = L[i];
 		for (int j = 8; j > 0; --j)
 		{
@@ -43,7 +43,7 @@ void print_L(uint16_t *L)
 
 void print_F(uint8_t F)
 {
-	printf("F: ");
+	printf("F  ");
 	for (int i = 7; i >= 0; --i)
 		putchar('0' + !!((F >> i) & 1));
 	putchar('\n');
@@ -55,7 +55,7 @@ static int xtoi(int c)
 {
 	if (isdigit(c))
 		return (c - '0');
-	return ((c -= 'a') >= 0 && c < 16 ? c : 16);
+	return ((c = c - 'a' + 10) >= 0 && c < 16 ? c : 16);
 }
 
 /*
@@ -109,9 +109,9 @@ static int generator_init(int ac, char **av, t_generator *g, uint64_t *n)
 	// => 7 - 3 <-> 7 - 6
 	g->F = swapb(swapb(parse(av[1], UCHAR_MAX), 6, 3), 4, 1);
 	*n = parse(av[2], 281474976710656UL);
-	g->L[0] = (*n >> 32) & 0xffff;
-	g->L[1] = (*n >> 16) & 0xffff;
-	g->L[2] = *n & 0xffff;
+	g->L[0] = (*n >> 32) & 0xffffU;
+	g->L[1] = (*n >> 16) & 0xffffU;
+	g->L[2] = *n & 0xffffU;
 	*n = parse(av[3], ULONG_MAX);
 	return errno;
 }
@@ -131,7 +131,6 @@ static void generator_run(t_generator *g, uint64_t n)
 	while (n--)
 	{
 		//print_L(L);
-		//printf("x: %u %c%c%c\n", c, (c >> 2) + '0', ((c >> 1) & 1) + '0', (c & 1) + '0');
 		putchar('0' + generator_output(g));
 		FEEDBACK(g->L[0], 1, 4, 7);
 		FEEDBACK(g->L[1], 1, 7, 11);
@@ -164,7 +163,10 @@ int main(int ac, char **av)
 	}
 	print_L(g.L);
 	print_F(g.F);
-	printf("n: %lu\n", n);
+	for (uint8_t i = 0; i < 0b1000; ++i)
+		printf("x %c%c%c -> %c\n", (i >> 2) + '0', ((i >> 1) & 1) + '0',
+		(i & 1) + '0', !!(g.F & (0x80 >> i)) + '0');
+	printf("n  %lu\n", n);
 	generator_run(&g, n);
 	return (0);
 }
