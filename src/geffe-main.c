@@ -1,29 +1,30 @@
 #include <errno.h>
-#include <stdio.h>
 #include "geffe.h"
 #include "utils.h"
 
-void print_help(char *bin)
-{
-	printf("usage: %s [FILTER] [KEY] [LEN]\n", bin);
-	puts("Each argument can be in base 2 if preceded by '0b',"
-	" in base 16 if preceded by '0x' or in base 10.\n");
-	puts("FILTER: 8 bits used by the filter function");
-	puts("KEY: 48 bits key to initialized LFSRs");
-	puts("LEN: maximum bits to output");
-}
+#define USAGE "[FILTER] [KEY] [LEN]"
+#define DESC \
+	"Geffe generator composed of 3 x 16 bit LFSR\n" \
+	"Each argument can be in base 2 if preceded by 0b," \
+	" in base 16 if preceded by 0x or in base 10.\n\n" \
+	"  [FILTER]  8 bits used by the filter function\n" \
+	"  [KEY]     48 bits key to initialized LFSRs\n" \
+	"  [LEN]     maximum bits to output\n\n" \
+	"  --debug   displays system status information\n" \
+	"  --help    display this help and exit\n"
 
 int main(int ac, char **av)
 {
 	t_generator	g;
-	uint64_t	n;
+	t_u64		n;
+	int			debug;
 
-	if (check_help(ac, av, &print_help))
+	if (check_help(ac, av, USAGE, DESC))
 		return (0);
-	n = generator_init(ac - 1, av + 1, &g);
+	debug = check_debug(&ac, av);
+	n = generator_init(av + 1, ac - 1, &g);
 	if (errno) // Gestion d'erreurs éventuelles
 		return print_error(av[0]);
-	if (n) // Si il y a des bits à afficher
-		generator_run(&g, n);
+	generator_run(&g, n, debug);
 	return (0);
 }

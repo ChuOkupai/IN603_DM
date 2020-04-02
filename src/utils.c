@@ -4,13 +4,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "type.h"
 
-int check_help(int ac, char **av, void (*print_help)(char *bin))
+int check_help(int ac, char **av, const char *usage, const char *desc)
 {
 	for (int i = 1; i < ac; ++i)
 		if (!strcmp(av[i], "--help")) // Affichage de l'aide
+			return !!printf("Usage: %s %s\n%s", basename(av[0]), usage, desc);
+	return (0);
+}
+
+int check_debug(int *ac, char **av)
+{
+	for (int i = 1; i < *ac; ++i)
+		if (!strcmp(av[i], "--debug"))
 		{
-			print_help(basename(av[0]));
+			while (++i < *ac) // L'argument est déplacé à la fin
+			{
+				char *s = av[i - 1];
+				av[i - 1] = av[i];
+				av[i] = s;
+			}
+			--*ac;
 			return (1);
 		}
 	return (0);
@@ -18,8 +33,9 @@ int check_help(int ac, char **av, void (*print_help)(char *bin))
 
 int print_error(char *bin)
 {
-	fprintf(stderr, "error: %s\nTry '%s --help' for more information.\n",
-	strerror(errno), basename(bin));
+	bin = basename(bin);
+	fprintf(stderr, "%s: %s\nTry '%s --help' for more information.\n",
+	bin, strerror(errno), bin);
 	return (EXIT_FAILURE);
 }
 
@@ -34,11 +50,11 @@ static int xtoi(int c)
 	return ((c = tolower(c) - 'a' + 10) >= 0 && c < 16 ? c : 16);
 }
 
-unsigned long parse(const char *s, unsigned long max)
+t_u64 parse(const char *s, const t_u64 max)
 {
-	unsigned long	base = 10;
-	unsigned long	c;
-	unsigned long	n = 0;
+	t_u64 base = 10;
+	t_u64 n = 0;
+	t_u64 c;
 
 	if (*s == '0' && tolower(s[1]) == 'b')
 		s += (base = 2);
@@ -56,4 +72,9 @@ unsigned long parse(const char *s, unsigned long max)
 			n = n * base + c;
 	while (*(++s));
 	return (n);
+}
+
+char btoa(t_u32 c)
+{
+	return ('0' + !!c);
 }
