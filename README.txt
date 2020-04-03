@@ -11,6 +11,9 @@ Commande de compilation:
 
 ## Utilisation
 
+Le binaire ./bin/geffe génère la suite de bits à partir des paramètres de l'utilisateur.
+Le binaire ./bin/geffe-cracker tente de retrouver la clé à partir d'une suite.
+
 Commande pour tester les binaires:
 	$> make test
 
