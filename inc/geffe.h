@@ -20,3 +20,9 @@ t_u64 generator_init(char **arg, int size, t_generator *g);
 ** Si debug est différent de 0, affiche le système à chaque itération.
 */
 void generator_run(t_generator *g, t_u64 n, int debug);
+
+/*
+** Effectue une attaque sur le générateur.
+** La fonction de filtrage est définie par défaut.
+*/
+t_generator generator_attack(const char *s);

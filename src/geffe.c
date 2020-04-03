@@ -67,6 +67,18 @@ t_u64 generator_init(char **arg, int size, t_generator *g)
 	return parse(arg[2], ULONG_MAX);
 }
 
+// Renvoie la valeur de x = x0x1x2
+static t_u8 X(t_generator *g)
+{
+	return ((g->L[0] & 1) << 2) | ((g->L[1] & 1) << 1) | (g->L[2] & 1);
+}
+
+// Renvoie la valeur de F(x0x1x2) en ASCII
+static t_u8 F(t_u8 filter, t_u8 x)
+{
+	return btoa(filter & (0x80 >> x));
+}
+
 void generator_run(t_generator *g, t_u64 n, int debug)
 {
 	if (debug)
@@ -78,11 +90,11 @@ void generator_run(t_generator *g, t_u64 n, int debug)
 		if (debug)
 			print_L(g->L);
 		// x = x0x1x2
-		t_u8 x = ((g->L[0] & 1) << 2) | ((g->L[1] & 1) << 1) | (g->L[2] & 1);
+		t_u8 x = X(g);
 		if (debug)
 			printf("%18cF(%c%c%c) = ", ' ', btoa((x >> 2)), btoa(x & 2),
 			btoa(x & 1));
-		putchar(btoa(g->F & (0x80 >> x))); // F(x0x1x2)
+		putchar(F(g->F, x)); // F(x0x1x2)
 		if (debug)
 			putchar('\n');
 		FEEDBACK(g->L[0], 1, 4, 7);
@@ -91,4 +103,52 @@ void generator_run(t_generator *g, t_u64 n, int debug)
 	}
 	if (!debug)
 		putchar('\n');
+}
+
+// Renvoie 1 si le générateur correspond à la suite s, 0 sinon
+int match(t_generator *g, const char *s)
+{
+	while (*s)
+	{
+		if (F(g->F, X(g)) != *s++)
+			return (0);
+		FEEDBACK(g->L[0], 1, 4, 7);
+		FEEDBACK(g->L[1], 1, 7, 11);
+		FEEDBACK(g->L[2], 2, 3, 5);
+	}
+	return (1);
+}
+
+int is_found(t_generator *g, const char *s, t_u16 i)
+{
+	if (!s[i] || i > 15)
+	{
+		t_generator g2 = *g;
+		return (match(&g2, s));
+	}
+	t_u16 z = s[i] - '0', j = 1 << i;
+	g->L[0] = (g->L[0] & ~j) | (!z << i);
+	g->L[1] = (g->L[1] & ~j) | (z << i);
+	g->L[2] = (g->L[2] & ~j) | (z << i);
+	if (is_found(g, s, i + 1)) // !zzz
+		return (1);
+	g->L[0] ^= j;
+	g->L[1] ^= j;
+	if (is_found(g, s, i + 1)) // z!zz
+		return (1);
+	g->L[0] ^= j;
+	if (is_found(g, s, i + 1)) // !z!zz
+		return (1);
+	g->L[2] ^= j;
+	return (is_found(g, s, i + 1)); // !z!z!z
+}
+
+t_generator generator_attack(const char *s)
+{
+	t_generator	g = { 0 };
+	g.F = 0b11010100;
+
+	if (!is_found(&g, s, 0))
+		errno = EINVAL; // non trouvé
+	return (g);
 }

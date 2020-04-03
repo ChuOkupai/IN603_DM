@@ -14,7 +14,7 @@ Commande de compilation:
 Commande pour tester les binaires:
 	$> make test
 
-La commande make rand-[NOM DU BINAIRE] génère un test aléatoire.
+La commande make rand-geffe génère un test aléatoire.
 Exemple:
 	$> make rand-geffe
 
