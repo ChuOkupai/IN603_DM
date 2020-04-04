@@ -13,12 +13,12 @@
 // Affiche la matrice de permutations (DEBUG)
 static void print_F(t_u8 F)
 {
-	printf("┌─────────┬───┬───┬───┬───┬───┬───┬───┬───┐\n│x0x1x2   │");
+	printf("┌─────────┬───┬───┬───┬───┬───┬───┬───┬───┐\n│ x0x1x2  │");
 	for (t_u8 i = 0; i < 8; ++i)
 		printf("%c%c%c│", btoa(i & 0b100), btoa(i & 0b10), btoa(i & 1));
 	printf("\n├─────────┼───┼───┼───┼───┼───┼───┼───┼───┤\n│F(x0x1x2)│");
 	for (t_u8 i = 0; i < 8; ++i)
-		printf("%c  │", btoa(F & (0x80 >> i)));
+		printf(" %c │", btoa(F & (0x80 >> i)));
 	printf("\n└─────────┴───┴───┴───┴───┴───┴───┴───┴───┘\n\n");
 }
 
@@ -76,7 +76,7 @@ static t_u8 X(t_generator *g)
 // Renvoie la valeur de F(x0x1x2) en ASCII
 static t_u8 F(t_u8 filter, t_u8 x)
 {
-	return btoa(filter & (0x80 >> x));
+	return (filter & (0x80 >> x));
 }
 
 void generator_run(t_generator *g, t_u64 n, int debug)
@@ -89,12 +89,11 @@ void generator_run(t_generator *g, t_u64 n, int debug)
 	{
 		if (debug)
 			print_L(g->L);
-		// x = x0x1x2
 		t_u8 x = X(g);
 		if (debug)
 			printf("%18cF(%c%c%c) = ", ' ', btoa((x >> 2)), btoa(x & 2),
 			btoa(x & 1));
-		putchar(F(g->F, x)); // F(x0x1x2)
+		putchar(btoa(F(g->F, x))); // F(x0x1x2)
 		if (debug)
 			putchar('\n');
 		FEEDBACK(g->L[0], 1, 4, 7);
@@ -105,50 +104,42 @@ void generator_run(t_generator *g, t_u64 n, int debug)
 		putchar('\n');
 }
 
-// Renvoie 1 si le générateur correspond à la suite s, 0 sinon
-int match(t_generator *g, const char *s)
+/*
+** Devine la valeur du LFSR
+** p = 100 * P(xi = F(x)) avec p != 50 sinon la probabilité est équilibrée
+** a, b, c sont les positions des coefficients de rétroaction
+*/
+t_u16	guess_key(const t_u8 *s, size_t len, t_u16 a, t_u16 b, t_u16 c,
+		t_u16 p)
 {
-	while (*s)
+	t_u16	r = 0, max_r = 0, t;
+	t_u32	h, max_h = 0; // Distance de Hamming inversée
+
+	p = p < 50; // Si p < 50, on veut P(xi != F(x)) => dH(!si, s2i)
+	do
 	{
-		if (F(g->F, X(g)) != *s++)
-			return (0);
-		FEEDBACK(g->L[0], 1, 4, 7);
-		FEEDBACK(g->L[1], 1, 7, 11);
-		FEEDBACK(g->L[2], 2, 3, 5);
-	}
-	return (1);
+		t = r; // registre temporaire
+		h = 0;
+		for (size_t i = 0; i < len; ++i)
+		{
+			h += p ^ s[i] ^ (t & 1) ^ 1;
+			FEEDBACK(t, a, b, c);
+		} // calcul de l'inverse de la distance de Hamming
+		if (h > max_h)
+		{
+			max_h = h;
+			max_r = r;
+		}
+	}	while (++r);
+	return (max_r);
 }
 
-int is_found(t_generator *g, const char *s, t_u16 i)
+t_generator generator_attack(const char *s, t_u64 len)
 {
-	if (!s[i] || i > 15)
-	{
-		t_generator g2 = *g;
-		return (match(&g2, s));
-	}
-	t_u16 z = s[i] - '0', j = 1 << i;
-	g->L[0] = (g->L[0] & ~j) | (!z << i);
-	g->L[1] = (g->L[1] & ~j) | (z << i);
-	g->L[2] = (g->L[2] & ~j) | (z << i);
-	if (is_found(g, s, i + 1)) // !zzz
-		return (1);
-	g->L[0] ^= j;
-	g->L[1] ^= j;
-	if (is_found(g, s, i + 1)) // z!zz
-		return (1);
-	g->L[0] ^= j;
-	if (is_found(g, s, i + 1)) // !z!zz
-		return (1);
-	g->L[2] ^= j;
-	return (is_found(g, s, i + 1)); // !z!z!z
-}
+	t_generator	g;
 
-t_generator generator_attack(const char *s)
-{
-	t_generator	g = { 0 };
-	g.F = 0b11010100;
-
-	if (!is_found(&g, s, 0))
-		errno = EINVAL; // non trouvé
+	g.L[0] = guess_key((const t_u8 *)s, len, 1, 4, 7, 25);
+	g.L[1] = guess_key((const t_u8 *)s, len, 1, 7, 11, 25);
+	g.L[2] = guess_key((const t_u8 *)s, len, 2, 3, 5, 75);
 	return (g);
 }

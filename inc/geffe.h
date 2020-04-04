@@ -25,4 +25,4 @@ void generator_run(t_generator *g, t_u64 n, int debug);
 ** Effectue une attaque sur le générateur.
 ** La fonction de filtrage est définie par défaut.
 */
-t_generator generator_attack(const char *s);
+t_generator generator_attack(const char *s, t_u64 len);
