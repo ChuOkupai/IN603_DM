@@ -8,7 +8,7 @@
 	"Geffe generator composed of 3 x 16 bit LFSR\n" \
 	"Perform an attack on the generator.\n" \
 	"The filter function is set to 0b10001110 by default.\n\n" \
-	"  [ENCRYPTION SUITE]  bits to use to find the key\n" \
+	"  [ENCRYPTION SUITE]  bits to use to find the key\n\n" \
 	"  --help              display this help and exit\n"
 
 int main(int ac, char **av)
@@ -31,8 +31,6 @@ int main(int ac, char **av)
 	if (errno) // Gestion d'erreurs éventuelles
 		return print_error(av[0]);
 	t_generator g = generator_attack(av[1], n);
-	printf("kO 0x%04hx\n", g.L[0]);
-	printf("k1 0x%04hx\n", g.L[1]);
-	printf("k2 0x%04hx\n", g.L[2]);
+	printf("Estimated K: 0x %04hx %04hx %04hx\n", g.L[0], g.L[1], g.L[2]);
 	return (0);
 }

@@ -109,8 +109,8 @@ void generator_run(t_generator *g, t_u64 n, int debug)
 ** p = 100 * P(xi = F(x)) avec p != 50 sinon la probabilité est équilibrée
 ** a, b, c sont les positions des coefficients de rétroaction
 */
-t_u16	guess_key(const t_u8 *s, size_t len, t_u16 a, t_u16 b, t_u16 c,
-		t_u16 p)
+static t_u16	guess_key(const t_u8 *s, size_t len, t_u16 a, t_u16 b,
+				t_u16 c, t_u16 p)
 {
 	t_u16	r = 0, max_r = 0, t;
 	t_u32	h, max_h = 0; // Distance de Hamming inversée
