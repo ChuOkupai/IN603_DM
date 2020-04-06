@@ -1,6 +1,6 @@
-# IN603 - DM
+IN603 - DM: Cryptographie Sym ́etrique - SOURSOU Adrien
 
-## Compilation
+* Compilation
 
 Les fichiers sources se trouvent dans le répertoire src.
 Un Makefile permet de compiler les sources.
@@ -9,7 +9,7 @@ Le compilateur utilisé est gcc, il est modifiable dans la variable CC.
 Commande de compilation:
 	$> make
 
-## Utilisation
+* Utilisation
 
 Le binaire ./geffe génère la suite de bits à partir des paramètres de l'utilisateur.
 Le binaire ./geffe-cracker tente de retrouver la clé à partir d'une suite de bits.
@@ -25,7 +25,7 @@ On peut aussi lancer le binaire manuellement.
 Exemple:
 	$> ./geffe 0b101010 0xff00eea30011 16
 
-### Options
+* Options
 
 Chaque binaire possède une option --help pour afficher l'aide.
 Exemple:
