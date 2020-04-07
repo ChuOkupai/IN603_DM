@@ -2,7 +2,8 @@ CC		:= gcc
 CFLAGS	:= -Wall -Wextra -Werror -Ofast
 BIN1	:= geffe
 BIN2	:= geffe-cracker
-BIN		:= $(BIN1) $(BIN2)
+BIN3	:= feistel
+BIN		:= $(BIN1) $(BIN2) $(BIN3)
 
 # Fonction R(SET, N)
 # Génère un texte aléatoire de taille N qui contient que des caratères du SET
@@ -25,6 +26,7 @@ test: $(BIN)
 	./$< --debug 0b01000010 0b1011 1
 	./$(word 2, $^) 111011101110110001010100010000001001101100011100000110100000100010000101011011011111101100100011111101010010000011101011001011100100101100111000
 	./$(word 2, $^) 111111111111111111111110101101101000101001111011111001111011010111111110101101
+	./$(word 3, $^) 0x4501982451023321 0x00d7818e72af039a
 
 rand-$(BIN1): $(BIN1)
 	./$< 0b$(call R, '0-1', 8) 0x$(call R, $(HEX), 12) $(call R, '1-8', 1)
@@ -42,6 +44,9 @@ $(BIN1): src/$(BIN1)-main.c .obj/geffe.o .obj/utils.o
 	$(CC) $(CFLAGS) -I./inc $^ -o $@
 
 $(BIN2): src/$(BIN2)-main.c .obj/geffe.o .obj/utils.o
+	$(CC) $(CFLAGS) -I./inc $^ -o $@
+
+$(BIN3): src/$(BIN3)-main.c .obj/utils.o
 	$(CC) $(CFLAGS) -I./inc $^ -o $@
 
 .PHONY: all clean re test rand-$(BIN1)

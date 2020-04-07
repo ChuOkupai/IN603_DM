@@ -9,11 +9,11 @@
 int check_help(int ac, char **av, const char *usage, const char *desc);
 
 /*
-** Fonction utilitaire qui détecte l'option '--debug'.
-** Si '--debug' est trouvée, renvoie 1 et déplace l'argument à la fin.
+** Fonction utilitaire qui détecte l'option 'expr'.
+** Si l'option 'expr' est trouvée, renvoie 1 et déplace l'argument à la fin.
 ** Le compteur d'arguments est lui aussi modifié.
 */
-int check_debug(int *ac, char **av);
+int check_expr(int *ac, char **av, const char *expr);
 
 /*
 ** Affiche une erreur à partir de la variable errno.

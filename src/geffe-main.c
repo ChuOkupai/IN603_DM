@@ -21,7 +21,7 @@ int main(int ac, char **av)
 
 	if (check_help(ac, av, USAGE, DESC))
 		return (0);
-	debug = check_debug(&ac, av);
+	debug = check_expr(&ac, av, "--debug");
 	n = generator_init(av + 1, ac - 1, &g);
 	if (errno) // Gestion d'erreurs éventuelles
 		return print_error(av[0]);

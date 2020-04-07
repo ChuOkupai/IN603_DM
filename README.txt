@@ -6,6 +6,11 @@ Les fichiers sources se trouvent dans le répertoire src.
 Un Makefile permet de compiler les sources.
 Le compilateur utilisé est gcc, il est modifiable dans la variable CC.
 
+Les 3 binaires sont:
+- geffe
+- geffe-cracker
+- feistel
+
 Commande de compilation:
 	$> make
 

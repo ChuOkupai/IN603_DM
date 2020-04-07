@@ -14,10 +14,10 @@ int check_help(int ac, char **av, const char *usage, const char *desc)
 	return (0);
 }
 
-int check_debug(int *ac, char **av)
+int check_expr(int *ac, char **av, const char *expr)
 {
 	for (int i = 1; i < *ac; ++i)
-		if (!strcmp(av[i], "--debug"))
+		if (!strcmp(av[i], expr))
 		{
 			while (++i < *ac) // L'argument est déplacé à la fin
 			{
